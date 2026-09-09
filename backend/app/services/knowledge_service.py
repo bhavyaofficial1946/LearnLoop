@@ -148,12 +148,12 @@ class KnowledgeService:
         ]
 
         # Fetch topic mastery if workspace provided
-        mastery_embed = None
-        prereq_mastery_items = []
+        mastery_detail = None
+        prereq_mastery_list = []
 
         if workspace_id:
             from backend.app.models.mastery import TopicMastery
-            from backend.app.schemas.topic import TopicMasteryEmbed, PrerequisiteMasteryItem
+            from backend.app.schemas.topic import TopicMasteryDetail, PrerequisiteMasteryItem
 
             m = db.query(TopicMastery).filter(
                 TopicMastery.student_subject_id == workspace_id,
@@ -161,22 +161,24 @@ class KnowledgeService:
             ).first()
 
             if m:
-                mastery_embed = TopicMasteryEmbed(
-                    status=m.status,
+                mastery_detail = TopicMasteryDetail(
+                    topic_id=topic.id,
+                    topic_name=topic.name,
                     understanding_score=m.understanding_score,
+                    status=m.status,
                     evidence_count=m.evidence_count,
                     correct_answers=m.correct_answers,
                     incorrect_answers=m.incorrect_answers,
                     last_assessed_at=m.last_assessed_at
                 )
 
-            # Prerequisite mastery check
+            # Prerequisite mastery list (for prerequisite health display)
             for p in prereqs:
                 pm = db.query(TopicMastery).filter(
                     TopicMastery.student_subject_id == workspace_id,
                     TopicMastery.topic_id == p.id
                 ).first()
-                prereq_mastery_items.append(PrerequisiteMasteryItem(
+                prereq_mastery_list.append(PrerequisiteMasteryItem(
                     id=p.id,
                     name=p.name,
                     slug=p.slug,
@@ -193,10 +195,10 @@ class KnowledgeService:
             unit_name=unit_name,
             parent_topic_id=topic.parent_topic_id,
             parent_topic_name=parent_name,
-            mastery=mastery_embed,
+            mastery=mastery_detail,
             prerequisites=prereq_briefs,
             dependents=dependent_briefs,
-            prerequisites_mastery=prereq_mastery_items,
+            prerequisites_mastery=prereq_mastery_list,
             subtopics=subtopics
         )
 

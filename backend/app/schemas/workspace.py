@@ -58,13 +58,15 @@ class WorkspaceOverviewResponse(BaseModel):
     total_materials: int
     created_at: datetime
 
-class TopicMasteryEmbed(BaseModel):
-    """Compact mastery info embedded in a Knowledge Map topic node."""
-    status: str = "not_assessed"
-    understanding_score: float = 0.0
-    evidence_count: int = 0
-    correct_answers: int = 0
-    incorrect_answers: int = 0
+class TopicMasteryNode(BaseModel):
+    """Lightweight mastery snapshot embedded in Knowledge Map nodes."""
+    topic_id: str
+    topic_name: str
+    understanding_score: float
+    status: str  # 'not_assessed', 'needs_attention', 'developing', 'strong'
+    evidence_count: int
+    correct_answers: int
+    incorrect_answers: int
     last_assessed_at: Optional[datetime] = None
 
 class KnowledgeMapTopicNode(BaseModel):
@@ -76,7 +78,7 @@ class KnowledgeMapTopicNode(BaseModel):
     parent_topic_id: Optional[str] = None
     prerequisites_count: int = 0
     prerequisites: List[str] = []  # Names of prerequisites
-    mastery: Optional[TopicMasteryEmbed] = None  # Nested mastery — null when never assessed
+    mastery: Optional[TopicMasteryNode] = None  # None when not assessed
     prerequisite_weakness_count: int = 0
     subtopics: List["KnowledgeMapTopicNode"] = []
 

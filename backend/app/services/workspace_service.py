@@ -14,8 +14,7 @@ from backend.app.schemas.workspace import (
     WorkspaceOverviewResponse,
     KnowledgeMapResponse,
     KnowledgeMapUnitNode,
-    KnowledgeMapTopicNode,
-    TopicMasteryEmbed
+    KnowledgeMapTopicNode
 )
 from backend.app.services.knowledge_service import KnowledgeService
 
@@ -142,8 +141,23 @@ class WorkspaceService:
 
         # Fetch topic masteries for this workspace
         from backend.app.models.mastery import TopicMastery
+        from backend.app.schemas.workspace import TopicMasteryNode
         masteries = db.query(TopicMastery).filter(TopicMastery.student_subject_id == workspace_id).all()
         mastery_map = {m.topic_id: m for m in masteries}
+
+        def build_mastery_node(topic, m) -> Optional["TopicMasteryNode"]:
+            if not m:
+                return None
+            return TopicMasteryNode(
+                topic_id=topic.id,
+                topic_name=topic.name,
+                understanding_score=m.understanding_score,
+                status=m.status,
+                evidence_count=m.evidence_count,
+                correct_answers=m.correct_answers,
+                incorrect_answers=m.incorrect_answers,
+                last_assessed_at=m.last_assessed_at
+            )
 
         for unit in units:
             syllabus_topics = db.query(SyllabusTopic).filter(
@@ -157,49 +171,26 @@ class WorkspaceService:
                     continue
 
                 # Fetch prerequisites names for this topic
-                prereqs = db.query(Topic.name).join(
+                prereqs = db.query(Topic).join(
                     Prerequisite, Prerequisite.prerequisite_topic_id == Topic.id
                 ).filter(Prerequisite.topic_id == topic.id).all()
-                prereq_names = [p[0] for p in prereqs]
+                prereq_names = [p.name for p in prereqs]
 
-                # Mastery info — build nested embed, None if never assessed
+                # Mastery info
                 t_mastery = mastery_map.get(topic.id)
-                mastery_embed = None
-                if t_mastery:
-                    mastery_embed = TopicMasteryEmbed(
-                        status=t_mastery.status,
-                        understanding_score=t_mastery.understanding_score,
-                        evidence_count=t_mastery.evidence_count,
-                        correct_answers=t_mastery.correct_answers,
-                        incorrect_answers=t_mastery.incorrect_answers,
-                        last_assessed_at=t_mastery.last_assessed_at
-                    )
+                mastery_node = build_mastery_node(topic, t_mastery)
 
-                # Prerequisite weakness — count prereqs with needs_attention or not_assessed
-                weakness_count = 0
-                prereq_topic_rows = db.query(Topic).join(
-                    Prerequisite, Prerequisite.prerequisite_topic_id == Topic.id
-                ).filter(Prerequisite.topic_id == topic.id).all()
-                for pr in prereq_topic_rows:
-                    pm = mastery_map.get(pr.id)
-                    if pm and pm.status in ("needs_attention",):
-                        weakness_count += 1
+                # Count prerequisite weaknesses (needs_attention or not_assessed)
+                prereq_weakness_count = sum(
+                    1 for p in prereqs
+                    if mastery_map.get(p.id) is None or mastery_map.get(p.id).status in ("needs_attention", "not_assessed")
+                )
 
                 # Fetch subtopics if any
                 subtopics = db.query(Topic).filter(Topic.parent_topic_id == topic.id).all()
                 subtopic_nodes = []
                 for i, sub in enumerate(subtopics):
                     sub_mastery = mastery_map.get(sub.id)
-                    sub_embed = None
-                    if sub_mastery:
-                        sub_embed = TopicMasteryEmbed(
-                            status=sub_mastery.status,
-                            understanding_score=sub_mastery.understanding_score,
-                            evidence_count=sub_mastery.evidence_count,
-                            correct_answers=sub_mastery.correct_answers,
-                            incorrect_answers=sub_mastery.incorrect_answers,
-                            last_assessed_at=sub_mastery.last_assessed_at
-                        )
                     subtopic_nodes.append(KnowledgeMapTopicNode(
                         id=sub.id,
                         name=sub.name,
@@ -209,7 +200,7 @@ class WorkspaceService:
                         parent_topic_id=topic.id,
                         prerequisites_count=0,
                         prerequisites=[],
-                        mastery=sub_embed,
+                        mastery=build_mastery_node(sub, sub_mastery),
                         prerequisite_weakness_count=0,
                         subtopics=[]
                     ))
@@ -223,8 +214,8 @@ class WorkspaceService:
                     parent_topic_id=topic.parent_topic_id,
                     prerequisites_count=len(prereq_names),
                     prerequisites=prereq_names,
-                    mastery=mastery_embed,
-                    prerequisite_weakness_count=weakness_count,
+                    mastery=mastery_node,
+                    prerequisite_weakness_count=prereq_weakness_count,
                     subtopics=subtopic_nodes
                 ))
                 total_topics_count += 1 + len(subtopic_nodes)
@@ -243,3 +234,4 @@ class WorkspaceService:
             total_units=len(unit_nodes),
             total_topics=total_topics_count
         )
+

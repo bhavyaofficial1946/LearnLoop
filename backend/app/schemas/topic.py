@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict
-from datetime import datetime
 from typing import Optional, List
+from datetime import datetime
 
 class PrerequisiteBrief(BaseModel):
     id: str
@@ -9,6 +9,23 @@ class PrerequisiteBrief(BaseModel):
     difficulty: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+class PrerequisiteMasteryItem(BaseModel):
+    id: str
+    name: str
+    slug: str
+    status: str = "not_assessed"
+    understanding_score: float = 0.0
+
+class TopicMasteryDetail(BaseModel):
+    topic_id: str
+    topic_name: str
+    understanding_score: float
+    status: str  # 'not_assessed', 'needs_attention', 'developing', 'strong'
+    evidence_count: int
+    correct_answers: int
+    incorrect_answers: int
+    last_assessed_at: Optional[datetime] = None
 
 class TopicBase(BaseModel):
     name: str
@@ -30,23 +47,6 @@ class PrerequisiteHealthItem(BaseModel):
     status: str
     is_healthy: bool
 
-class TopicMasteryEmbed(BaseModel):
-    """Mastery info nested inside a Topic Detail or Knowledge Map node."""
-    status: str = "not_assessed"
-    understanding_score: float = 0.0
-    evidence_count: int = 0
-    correct_answers: int = 0
-    incorrect_answers: int = 0
-    last_assessed_at: Optional[datetime] = None
-
-class PrerequisiteMasteryItem(BaseModel):
-    """Prerequisite topic with its mastery status — used in TopicDetailResponse."""
-    id: str
-    name: str
-    slug: str
-    status: str = "not_assessed"
-    understanding_score: float = 0.0
-
 class TopicDetailResponse(BaseModel):
     id: str
     name: str
@@ -56,10 +56,10 @@ class TopicDetailResponse(BaseModel):
     unit_name: Optional[str] = None
     parent_topic_id: Optional[str] = None
     parent_topic_name: Optional[str] = None
-    mastery: Optional[TopicMasteryEmbed] = None  # Nested; null if never assessed
+    mastery: Optional[TopicMasteryDetail] = None  # None when not assessed
     prerequisites: List[PrerequisiteBrief] = []
     dependents: List[PrerequisiteBrief] = []
-    prerequisites_mastery: List[PrerequisiteMasteryItem] = []
+    prerequisites_mastery: List[PrerequisiteMasteryItem] = []  # Mastery state of each prerequisite
     subtopics: List[TopicResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
