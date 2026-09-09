@@ -6,6 +6,13 @@ from backend.app.models.material import AcademicMaterial
 from backend.app.models.unit import Unit
 from backend.app.models.topic import Topic, SyllabusTopic
 from backend.app.models.prerequisite import Prerequisite
+from backend.app.models.diagnostic import (
+    DiagnosticQuestion,
+    DiagnosticOption,
+    DiagnosticAssessment,
+    DiagnosticResponse
+)
+from backend.app.models.mastery import TopicMastery
 
 __all__ = [
     "Base",
@@ -16,5 +23,10 @@ __all__ = [
     "Unit",
     "Topic",
     "SyllabusTopic",
-    "Prerequisite"
+    "Prerequisite",
+    "DiagnosticQuestion",
+    "DiagnosticOption",
+    "DiagnosticAssessment",
+    "DiagnosticResponse",
+    "TopicMastery"
 ]

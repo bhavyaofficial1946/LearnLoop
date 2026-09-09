@@ -1,6 +1,8 @@
 export type LearningGoal = "exam_preparation" | "concept_mastery";
 export type TopicDifficulty = "beginner" | "intermediate" | "advanced";
 
+export type TopicMasteryStatus = "not_assessed" | "needs_attention" | "developing" | "strong";
+
 export interface Student {
   id: string;
   name: string;
@@ -24,6 +26,14 @@ export interface PrerequisiteBrief {
   difficulty?: TopicDifficulty;
 }
 
+export interface PrerequisiteMasteryItem {
+  id: string;
+  name: string;
+  slug: string;
+  status: TopicMasteryStatus;
+  understanding_score: number;
+}
+
 export interface TopicResponse {
   id: string;
   name: string;
@@ -32,6 +42,17 @@ export interface TopicResponse {
   difficulty?: TopicDifficulty;
   is_canonical: boolean;
   subtopics: TopicResponse[];
+}
+
+export interface TopicMastery {
+  topic_id: string;
+  topic_name: string;
+  understanding_score: number;
+  status: TopicMasteryStatus;
+  evidence_count: number;
+  correct_answers: number;
+  incorrect_answers: number;
+  last_assessed_at?: string | null;
 }
 
 export interface TopicDetail {
@@ -46,6 +67,8 @@ export interface TopicDetail {
   prerequisites: PrerequisiteBrief[];
   dependents: PrerequisiteBrief[];
   subtopics: TopicResponse[];
+  mastery?: TopicMastery | null;
+  prerequisites_mastery?: PrerequisiteMasteryItem[];
 }
 
 export interface SyllabusUnitInput {
@@ -99,6 +122,8 @@ export interface KnowledgeMapTopicNode {
   prerequisites_count: number;
   prerequisites: string[];
   subtopics: KnowledgeMapTopicNode[];
+  mastery?: TopicMastery | null;
+  prerequisite_weakness_count?: number;
 }
 
 export interface KnowledgeMapUnitNode {
@@ -114,6 +139,82 @@ export interface KnowledgeMapResponse {
   units: KnowledgeMapUnitNode[];
   total_units: number;
   total_topics: number;
+}
+
+export interface WorkspaceMasterySummary {
+  workspace_id: string;
+  has_baseline: boolean;
+  total_topics: number;
+  assessed_topics_count: number;
+  strong_count: number;
+  developing_count: number;
+  needs_attention_count: number;
+  not_assessed_count: number;
+  topic_masteries: TopicMastery[];
+}
+
+export interface DiagnosticOption {
+  id: string;
+  option_text: string;
+  order_index: number;
+}
+
+export interface DiagnosticQuestion {
+  id: string;
+  topic_id?: string;
+  topic_name?: string;
+  difficulty: TopicDifficulty;
+  question_text: string;
+  options: DiagnosticOption[];
+}
+
+export interface DiagnosticAssessment {
+  id: string;
+  student_subject_id: string;
+  title: string;
+  status: "in_progress" | "completed" | "abandoned";
+  total_questions: number;
+  answered_count: number;
+  questions: DiagnosticQuestion[];
+  created_at: string;
+  completed_at?: string | null;
+}
+
+export interface AssessmentResultItem {
+  question_id: string;
+  question_text: string;
+  topic_id: string;
+  topic_name: string;
+  difficulty: string;
+  selected_option_id?: string | null;
+  correct_option_id: string;
+  is_correct: boolean;
+  explanation?: string | null;
+}
+
+export interface TopicMasteryBrief {
+  topic_id: string;
+  topic_name: string;
+  status: TopicMasteryStatus;
+  understanding_score: number;
+  evidence_count: number;
+  correct_answers: number;
+  incorrect_answers: number;
+}
+
+export interface AssessmentResult {
+  assessment_id: string;
+  status: string;
+  total_questions: number;
+  correct_count: number;
+  incorrect_count: number;
+  score_percentage: number;
+  results: AssessmentResultItem[];
+  topic_masteries: TopicMasteryBrief[];
+  strong_topics: string[];
+  developing_topics: string[];
+  needs_attention_topics: string[];
+  not_assessed_topics: string[];
 }
 
 export interface WorkspaceCreatePayload {
@@ -137,3 +238,4 @@ export interface WorkspaceCreatedResponse {
   created_at: string;
   updated_at: string;
 }
+

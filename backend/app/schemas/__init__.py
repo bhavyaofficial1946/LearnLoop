@@ -16,6 +16,21 @@ from backend.app.schemas.syllabus import (
     SyllabusExtractResponse,
     SyllabusStructure
 )
+from backend.app.schemas.diagnostic import (
+    OptionPublicResponse,
+    QuestionPublicResponse,
+    DiagnosticAssessmentResponse,
+    AnswerSubmissionRequest,
+    AssessmentCompleteRequest,
+    AssessmentResultResponse,
+    AssessmentResultItem,
+    TopicMasteryBrief
+)
+from backend.app.schemas.mastery import (
+    TopicMasteryResponse,
+    WorkspaceMasterySummaryResponse,
+    PrerequisiteMasteryItem
+)
 
 __all__ = [
     "StudentCreate",
@@ -36,5 +51,16 @@ __all__ = [
     "TopicDetailResponse",
     "SyllabusUnitInput",
     "SyllabusExtractResponse",
-    "SyllabusStructure"
+    "SyllabusStructure",
+    "OptionPublicResponse",
+    "QuestionPublicResponse",
+    "DiagnosticAssessmentResponse",
+    "AnswerSubmissionRequest",
+    "AssessmentCompleteRequest",
+    "AssessmentResultResponse",
+    "AssessmentResultItem",
+    "TopicMasteryBrief",
+    "TopicMasteryResponse",
+    "WorkspaceMasterySummaryResponse",
+    "PrerequisiteMasteryItem"
 ]

@@ -116,4 +116,9 @@ def seed_canonical_knowledge(db: Session):
 
     db.commit()
     logger.info("Canonical knowledge base successfully seeded.")
+
+    # Seed Diagnostic questions
+    from backend.app.db.seeds_diagnostic import seed_diagnostic_questions
+    seed_diagnostic_questions(db)
+    
     return subject

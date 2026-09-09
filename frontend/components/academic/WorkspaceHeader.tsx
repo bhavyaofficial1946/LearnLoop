@@ -1,15 +1,20 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
-import { Calendar, Target, BookOpen, Layers, FileText, User } from "lucide-react";
-import { WorkspaceOverview } from "@/types";
+import { Button } from "@/components/ui/Button";
+import { Calendar, Target, BookOpen, Layers, FileText, User, Award, ArrowRight } from "lucide-react";
+import { WorkspaceOverview, WorkspaceMasterySummary } from "@/types";
 
 export interface WorkspaceHeaderProps {
   overview: WorkspaceOverview;
+  masterySummary?: WorkspaceMasterySummary | null;
 }
 
-export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ overview }) => {
+export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ overview, masterySummary }) => {
+  const isAssessed = Boolean(masterySummary && (masterySummary.has_baseline || masterySummary.assessed_topics_count > 0));
+
   return (
     <div className="w-full bg-white border-b border-slate-200/80 pb-6 pt-6">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -20,7 +25,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ overview }) =>
             <span>Workspace: {overview.student_name}</span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {overview.goal === "exam_preparation" ? (
               <Badge variant="indigo" className="text-xs py-1 px-2.5">
                 <Target className="w-3 h-3 mr-1.5" />
@@ -47,6 +52,17 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ overview }) =>
                 )}
               </Badge>
             )}
+
+            {isAssessed ? (
+              <Badge variant="secondary" className="text-xs py-1 px-2.5 border-emerald-200 bg-emerald-50 text-emerald-800">
+                <Award className="w-3 h-3 mr-1.5 text-emerald-600" />
+                Baseline Established
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs py-1 px-2.5 border-amber-300 bg-amber-50 text-amber-800">
+                Baseline Pending
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -61,27 +77,37 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ overview }) =>
             </p>
           </div>
 
-          {/* Real Metrics Summary */}
-          <div className="flex items-center gap-4 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl">
-            <div className="flex items-center gap-1.5">
-              <Layers className="w-4 h-4 text-slate-500" />
-              <span>
-                <strong className="text-slate-900">{overview.total_units}</strong> Units
-              </span>
-            </div>
-            <span className="text-slate-300">|</span>
-            <div className="flex items-center gap-1.5">
-              <BookOpen className="w-4 h-4 text-slate-500" />
-              <span>
-                <strong className="text-slate-900">{overview.total_topics}</strong> Topics
-              </span>
-            </div>
-            <span className="text-slate-300">|</span>
-            <div className="flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-slate-500" />
-              <span>
-                <strong className="text-slate-900">{overview.total_materials}</strong> Materials
-              </span>
+          {/* Action & Metrics Summary */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href={`/workspace/${overview.id}/assessment`}>
+              <Button size="sm" variant={isAssessed ? "outline" : "primary"} className="text-xs font-semibold shadow-xs">
+                <Award className="w-3.5 h-3.5 mr-1.5 text-indigo-500" />
+                {isAssessed ? "Retake Diagnostic" : "Assess My Knowledge"}
+                <ArrowRight className="w-3.5 h-3.5 ml-1" />
+              </Button>
+            </Link>
+
+            <div className="flex items-center gap-4 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 px-4 py-2 rounded-xl">
+              <div className="flex items-center gap-1.5">
+                <Layers className="w-4 h-4 text-slate-500" />
+                <span>
+                  <strong className="text-slate-900">{overview.total_units}</strong> Units
+                </span>
+              </div>
+              <span className="text-slate-300">|</span>
+              <div className="flex items-center gap-1.5">
+                <BookOpen className="w-4 h-4 text-slate-500" />
+                <span>
+                  <strong className="text-slate-900">{overview.total_topics}</strong> Topics
+                </span>
+              </div>
+              <span className="text-slate-300">|</span>
+              <div className="flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-slate-500" />
+                <span>
+                  <strong className="text-slate-900">{overview.total_materials}</strong> Materials
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -89,3 +115,4 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({ overview }) =>
     </div>
   );
 };
+

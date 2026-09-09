@@ -12,8 +12,11 @@ import {
   ArrowUpRight,
   Sparkles,
   CheckCircle2,
+  Activity,
+  Award,
+  AlertCircle,
 } from "lucide-react";
-import { TopicDetail } from "@/types";
+import { TopicDetail, TopicMasteryStatus } from "@/types";
 import { api } from "@/lib/api/client";
 
 export interface TopicDetailDrawerProps {
@@ -71,6 +74,39 @@ export const TopicDetailDrawer: React.FC<TopicDetailDrawerProps> = ({
     }
   };
 
+  const getMasteryBadge = (status?: TopicMasteryStatus) => {
+    switch (status) {
+      case "strong":
+        return (
+          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+            Strong Understanding
+          </span>
+        );
+      case "developing":
+        return (
+          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-md bg-amber-50 text-amber-800 border border-amber-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+            Developing
+          </span>
+        );
+      case "needs_attention":
+        return (
+          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-md bg-rose-50 text-rose-800 border border-rose-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+            Needs Attention
+          </span>
+        );
+      case "not_assessed":
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+            Not Assessed
+          </span>
+        );
+    }
+  };
+
   return (
     <Drawer
       isOpen={Boolean(topicId)}
@@ -105,6 +141,51 @@ export const TopicDetailDrawer: React.FC<TopicDetailDrawerProps> = ({
             )}
           </div>
 
+          {/* Understanding State Section */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2">
+              <Award className="w-4 h-4 text-slate-700" />
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                Understanding Baseline
+              </h4>
+            </div>
+
+            <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-slate-600 font-medium">Diagnostic Status</span>
+                {getMasteryBadge(topic.mastery?.status)}
+              </div>
+
+              {topic.mastery && topic.mastery.evidence_count > 0 ? (
+                <div className="space-y-2 pt-2 border-t border-slate-100 text-xs text-slate-600">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Evidence Count:</span>
+                    <span className="font-semibold text-slate-800">
+                      {topic.mastery.evidence_count} {topic.mastery.evidence_count === 1 ? "question" : "questions"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Assessment Breakdown:</span>
+                    <span className="font-medium text-slate-700">
+                      <strong className="text-emerald-700">{topic.mastery.correct_answers}</strong> correct,{" "}
+                      <strong className="text-rose-700">{topic.mastery.incorrect_answers}</strong> incorrect
+                    </span>
+                  </div>
+                  {topic.mastery.last_assessed_at && (
+                    <div className="flex justify-between text-[11px] text-slate-400 pt-1">
+                      <span>Last Assessed:</span>
+                      <span>{new Date(topic.mastery.last_assessed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500 pt-1 border-t border-slate-100">
+                  This topic has not been assessed yet. Take the diagnostic assessment from the workspace dashboard to establish your baseline.
+                </p>
+              )}
+            </div>
+          </div>
+
           {/* Prerequisites Section */}
           <div className="space-y-2.5">
             <div className="flex items-center gap-2">
@@ -119,22 +200,38 @@ export const TopicDetailDrawer: React.FC<TopicDetailDrawerProps> = ({
 
             {topic.prerequisites.length > 0 ? (
               <div className="space-y-2 pt-1">
-                {topic.prerequisites.map((p) => (
-                  <div
-                    key={p.id}
-                    onClick={() => onSelectAnotherTopic(p.id)}
-                    className="p-3 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 bg-white transition-all cursor-pointer flex items-center justify-between"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                      <span className="text-xs font-semibold text-slate-900">{p.name}</span>
+                {topic.prerequisites.map((p) => {
+                  const prereqMastery = topic.prerequisites_mastery?.find((pm) => pm.id === p.id);
+                  return (
+                    <div
+                      key={p.id}
+                      onClick={() => onSelectAnotherTopic(p.id)}
+                      className="p-3 rounded-lg border border-slate-200 hover:border-slate-300 hover:bg-slate-50 bg-white transition-all cursor-pointer flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                        <span className="text-xs font-semibold text-slate-900">{p.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {prereqMastery && (
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${
+                            prereqMastery.status === "strong"
+                              ? "bg-emerald-50 text-emerald-700"
+                              : prereqMastery.status === "developing"
+                              ? "bg-amber-50 text-amber-700"
+                              : prereqMastery.status === "needs_attention"
+                              ? "bg-rose-50 text-rose-700"
+                              : "bg-slate-100 text-slate-500"
+                          }`}>
+                            {prereqMastery.status.replace("_", " ")}
+                          </span>
+                        )}
+                        {getDifficultyBadge(p.difficulty)}
+                        <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {getDifficultyBadge(p.difficulty)}
-                      <ArrowRight className="w-3.5 h-3.5 text-slate-400" />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="p-3.5 rounded-lg border border-dashed border-slate-200 bg-slate-50/50 text-xs text-slate-500">
@@ -205,3 +302,4 @@ export const TopicDetailDrawer: React.FC<TopicDetailDrawerProps> = ({
     </Drawer>
   );
 };
+

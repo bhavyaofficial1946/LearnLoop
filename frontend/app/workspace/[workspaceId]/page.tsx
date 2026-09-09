@@ -20,11 +20,17 @@ import {
   RotateCcw,
   ArrowLeft,
   Share2,
+  Award,
+  ArrowRight,
+  CheckCircle2,
+  HelpCircle,
+  AlertCircle,
 } from "lucide-react";
 import {
   WorkspaceOverview,
   KnowledgeMapResponse,
   AcademicMaterial,
+  WorkspaceMasterySummary,
 } from "@/types";
 import { api } from "@/lib/api/client";
 
@@ -38,6 +44,7 @@ export default function WorkspaceDashboardPage({ params }: PageProps) {
 
   const [overview, setOverview] = useState<WorkspaceOverview | null>(null);
   const [knowledgeMap, setKnowledgeMap] = useState<KnowledgeMapResponse | null>(null);
+  const [masterySummary, setMasterySummary] = useState<WorkspaceMasterySummary | null>(null);
   const [materials, setMaterials] = useState<AcademicMaterial[]>([]);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
 
@@ -48,15 +55,17 @@ export default function WorkspaceDashboardPage({ params }: PageProps) {
     setIsLoading(true);
     setError(null);
     try {
-      const [overviewData, mapData, materialsData] = await Promise.all([
+      const [overviewData, mapData, materialsData, masteryData] = await Promise.all([
         api.getWorkspaceOverview(workspaceId),
         api.getKnowledgeMap(workspaceId),
         api.getWorkspaceMaterials(workspaceId),
+        api.getWorkspaceMastery(workspaceId).catch(() => null),
       ]);
 
       setOverview(overviewData);
       setKnowledgeMap(mapData);
       setMaterials(materialsData);
+      setMasterySummary(masteryData);
 
       // Save as active workspace in localStorage
       if (typeof window !== "undefined") {
@@ -119,19 +128,98 @@ export default function WorkspaceDashboardPage({ params }: PageProps) {
     );
   }
 
+  const isAssessed = Boolean(masterySummary && (masterySummary.has_baseline || masterySummary.assessed_topics_count > 0));
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50/50">
       <Header />
 
       {/* Main Workspace Header */}
-      <WorkspaceHeader overview={overview} />
+      <WorkspaceHeader overview={overview} masterySummary={masterySummary} />
 
       {/* Workspace Dashboard Body */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           {/* Main Column: Knowledge Map Tree (2 cols on large screen) */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="flex items-center justify-between">
+            {/* Knowledge Baseline Overview Card */}
+            <Card className="p-6 bg-white border-slate-200">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                    <Award className="w-4 h-4 text-indigo-600" />
+                    Knowledge Baseline Overview
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {isAssessed
+                      ? "Evaluated topic mastery based on your diagnostic assessment responses."
+                      : "Establish your topic-by-topic understanding baseline through a short diagnostic assessment."}
+                  </p>
+                </div>
+
+                <Link href={`/workspace/${workspaceId}/assessment`}>
+                  <Button size="sm" variant={isAssessed ? "outline" : "primary"} className="text-xs shrink-0 font-medium">
+                    {isAssessed ? "Retake Diagnostic" : "Assess My Knowledge"}
+                    <ArrowRight className="w-3 h-3 ml-1.5" />
+                  </Button>
+                </Link>
+              </div>
+
+              {isAssessed && masterySummary ? (
+                <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-3 rounded-lg bg-emerald-50/70 border border-emerald-200">
+                    <span className="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider block">
+                      Strong
+                    </span>
+                    <span className="text-2xl font-bold text-emerald-900 mt-0.5 block">
+                      {masterySummary.strong_count}
+                    </span>
+                    <span className="text-[10px] text-emerald-700">Solid comprehension</span>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-amber-50/70 border border-amber-200">
+                    <span className="text-[11px] font-semibold text-amber-800 uppercase tracking-wider block">
+                      Developing
+                    </span>
+                    <span className="text-2xl font-bold text-amber-900 mt-0.5 block">
+                      {masterySummary.developing_count}
+                    </span>
+                    <span className="text-[10px] text-amber-700">Partial evidence</span>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-rose-50/70 border border-rose-200">
+                    <span className="text-[11px] font-semibold text-rose-800 uppercase tracking-wider block">
+                      Needs Attention
+                    </span>
+                    <span className="text-2xl font-bold text-rose-900 mt-0.5 block">
+                      {masterySummary.needs_attention_count}
+                    </span>
+                    <span className="text-[10px] text-rose-700">Gaps identified</span>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                    <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider block">
+                      Not Assessed
+                    </span>
+                    <span className="text-2xl font-bold text-slate-800 mt-0.5 block">
+                      {masterySummary.not_assessed_count}
+                    </span>
+                    <span className="text-[10px] text-slate-500">Awaiting evaluation</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 p-4 rounded-lg bg-slate-50 border border-dashed border-slate-200 text-xs text-slate-600 flex items-center justify-between">
+                  <span>Your knowledge baseline hasn&apos;t been established yet.</span>
+                  <Link href={`/workspace/${workspaceId}/assessment`}>
+                    <span className="text-indigo-600 font-semibold hover:underline">
+                      Take 10-12 question diagnostic →
+                    </span>
+                  </Link>
+                </div>
+              )}
+            </Card>
+
+            <div className="flex items-center justify-between pt-2">
               <div>
                 <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
                   <Layers className="w-5 h-5 text-indigo-600" />
@@ -183,8 +271,10 @@ export default function WorkspaceDashboardPage({ params }: PageProps) {
                   <span className="font-medium text-slate-900">{overview.subject_name}</span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="text-slate-500">Database Status:</span>
-                  <span className="text-emerald-700 font-semibold">Persisted ✓</span>
+                  <span className="text-slate-500">Knowledge State:</span>
+                  <span className={isAssessed ? "text-emerald-700 font-semibold" : "text-amber-700 font-medium"}>
+                    {isAssessed ? `${masterySummary?.assessed_topics_count} Topics Assessed ✓` : "Pending Diagnostic"}
+                  </span>
                 </div>
               </div>
             </Card>
@@ -204,3 +294,4 @@ export default function WorkspaceDashboardPage({ params }: PageProps) {
     </div>
   );
 }
+

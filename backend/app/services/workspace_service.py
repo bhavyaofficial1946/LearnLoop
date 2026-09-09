@@ -14,7 +14,8 @@ from backend.app.schemas.workspace import (
     WorkspaceOverviewResponse,
     KnowledgeMapResponse,
     KnowledgeMapUnitNode,
-    KnowledgeMapTopicNode
+    KnowledgeMapTopicNode,
+    TopicMasteryEmbed
 )
 from backend.app.services.knowledge_service import KnowledgeService
 
@@ -139,6 +140,11 @@ class WorkspaceService:
         unit_nodes: List[KnowledgeMapUnitNode] = []
         total_topics_count = 0
 
+        # Fetch topic masteries for this workspace
+        from backend.app.models.mastery import TopicMastery
+        masteries = db.query(TopicMastery).filter(TopicMastery.student_subject_id == workspace_id).all()
+        mastery_map = {m.topic_id: m for m in masteries}
+
         for unit in units:
             syllabus_topics = db.query(SyllabusTopic).filter(
                 SyllabusTopic.unit_id == unit.id
@@ -156,10 +162,45 @@ class WorkspaceService:
                 ).filter(Prerequisite.topic_id == topic.id).all()
                 prereq_names = [p[0] for p in prereqs]
 
+                # Mastery info — build nested embed, None if never assessed
+                t_mastery = mastery_map.get(topic.id)
+                mastery_embed = None
+                if t_mastery:
+                    mastery_embed = TopicMasteryEmbed(
+                        status=t_mastery.status,
+                        understanding_score=t_mastery.understanding_score,
+                        evidence_count=t_mastery.evidence_count,
+                        correct_answers=t_mastery.correct_answers,
+                        incorrect_answers=t_mastery.incorrect_answers,
+                        last_assessed_at=t_mastery.last_assessed_at
+                    )
+
+                # Prerequisite weakness — count prereqs with needs_attention or not_assessed
+                weakness_count = 0
+                prereq_topic_rows = db.query(Topic).join(
+                    Prerequisite, Prerequisite.prerequisite_topic_id == Topic.id
+                ).filter(Prerequisite.topic_id == topic.id).all()
+                for pr in prereq_topic_rows:
+                    pm = mastery_map.get(pr.id)
+                    if pm and pm.status in ("needs_attention",):
+                        weakness_count += 1
+
                 # Fetch subtopics if any
                 subtopics = db.query(Topic).filter(Topic.parent_topic_id == topic.id).all()
-                subtopic_nodes = [
-                    KnowledgeMapTopicNode(
+                subtopic_nodes = []
+                for i, sub in enumerate(subtopics):
+                    sub_mastery = mastery_map.get(sub.id)
+                    sub_embed = None
+                    if sub_mastery:
+                        sub_embed = TopicMasteryEmbed(
+                            status=sub_mastery.status,
+                            understanding_score=sub_mastery.understanding_score,
+                            evidence_count=sub_mastery.evidence_count,
+                            correct_answers=sub_mastery.correct_answers,
+                            incorrect_answers=sub_mastery.incorrect_answers,
+                            last_assessed_at=sub_mastery.last_assessed_at
+                        )
+                    subtopic_nodes.append(KnowledgeMapTopicNode(
                         id=sub.id,
                         name=sub.name,
                         slug=sub.slug,
@@ -168,10 +209,10 @@ class WorkspaceService:
                         parent_topic_id=topic.id,
                         prerequisites_count=0,
                         prerequisites=[],
+                        mastery=sub_embed,
+                        prerequisite_weakness_count=0,
                         subtopics=[]
-                    )
-                    for i, sub in enumerate(subtopics)
-                ]
+                    ))
 
                 topic_nodes.append(KnowledgeMapTopicNode(
                     id=topic.id,
@@ -182,6 +223,8 @@ class WorkspaceService:
                     parent_topic_id=topic.parent_topic_id,
                     prerequisites_count=len(prereq_names),
                     prerequisites=prereq_names,
+                    mastery=mastery_embed,
+                    prerequisite_weakness_count=weakness_count,
                     subtopics=subtopic_nodes
                 ))
                 total_topics_count += 1 + len(subtopic_nodes)

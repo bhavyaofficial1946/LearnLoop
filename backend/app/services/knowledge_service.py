@@ -147,6 +147,43 @@ class KnowledgeService:
             for sub in topic.subtopics
         ]
 
+        # Fetch topic mastery if workspace provided
+        mastery_embed = None
+        prereq_mastery_items = []
+
+        if workspace_id:
+            from backend.app.models.mastery import TopicMastery
+            from backend.app.schemas.topic import TopicMasteryEmbed, PrerequisiteMasteryItem
+
+            m = db.query(TopicMastery).filter(
+                TopicMastery.student_subject_id == workspace_id,
+                TopicMastery.topic_id == topic.id
+            ).first()
+
+            if m:
+                mastery_embed = TopicMasteryEmbed(
+                    status=m.status,
+                    understanding_score=m.understanding_score,
+                    evidence_count=m.evidence_count,
+                    correct_answers=m.correct_answers,
+                    incorrect_answers=m.incorrect_answers,
+                    last_assessed_at=m.last_assessed_at
+                )
+
+            # Prerequisite mastery check
+            for p in prereqs:
+                pm = db.query(TopicMastery).filter(
+                    TopicMastery.student_subject_id == workspace_id,
+                    TopicMastery.topic_id == p.id
+                ).first()
+                prereq_mastery_items.append(PrerequisiteMasteryItem(
+                    id=p.id,
+                    name=p.name,
+                    slug=p.slug,
+                    status=pm.status if pm else "not_assessed",
+                    understanding_score=pm.understanding_score if pm else 0.0
+                ))
+
         return TopicDetailResponse(
             id=topic.id,
             name=topic.name,
@@ -156,7 +193,10 @@ class KnowledgeService:
             unit_name=unit_name,
             parent_topic_id=topic.parent_topic_id,
             parent_topic_name=parent_name,
+            mastery=mastery_embed,
             prerequisites=prereq_briefs,
             dependents=dependent_briefs,
+            prerequisites_mastery=prereq_mastery_items,
             subtopics=subtopics
         )
+
